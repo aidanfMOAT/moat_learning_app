@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { AssignmentScope, ProgressStatus, QuizRequirement, Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/session';
 
@@ -12,9 +11,9 @@ export default async function DashboardPage() {
       assignments: {
         some: {
           OR: [
-            { scope: AssignmentScope.EVERYONE },
-            { scope: AssignmentScope.USER, userId: session.user.id },
-            session.user.teamId ? { scope: AssignmentScope.TEAM, teamId: session.user.teamId } : undefined
+            { scope: 'EVERYONE' },
+            { scope: 'USER', userId: session.user.id },
+            session.user.teamId ? { scope: 'TEAM', teamId: session.user.teamId } : undefined
           ].filter(Boolean) as any
         }
       }
@@ -27,12 +26,12 @@ export default async function DashboardPage() {
 
   const learnerCards = {
     assigned: assignedCourses.length,
-    inProgress: assignedCourses.filter((c) => c.progress[0]?.status === ProgressStatus.IN_PROGRESS).length,
-    completed: assignedCourses.filter((c) => c.progress[0]?.status === ProgressStatus.COMPLETED).length
+    inProgress: assignedCourses.filter((c) => c.progress[0]?.status === 'IN_PROGRESS').length,
+    completed: assignedCourses.filter((c) => c.progress[0]?.status === 'COMPLETED').length
   };
 
-  const isManager = session.user.role === Role.MANAGER;
-  const isAdmin = session.user.role === Role.ADMIN;
+  const isManager = session.user.role === 'MANAGER';
+  const isAdmin = session.user.role === 'ADMIN';
 
   const teamReport =
     isManager && session.user.teamId
@@ -86,10 +85,10 @@ export default async function DashboardPage() {
       {isManager ? (
         <section className="card">
           <h2>Manager Team Report</h2>
-          <p>Team completion %: {teamReport.length ? Math.round((teamReport.filter((p) => p.status === ProgressStatus.COMPLETED).length / teamReport.length) * 100) : 0}%</p>
+          <p>Team completion %: {teamReport.length ? Math.round((teamReport.filter((p) => p.status === 'COMPLETED').length / teamReport.length) * 100) : 0}%</p>
           <ul>
             {teamReport
-              .filter((p) => p.status !== ProgressStatus.COMPLETED || p.latestQuizScore === null)
+              .filter((p) => p.status !== 'COMPLETED' || p.latestQuizScore === null)
               .map((p) => (
                 <li key={p.id}>{p.user.name} · {p.course.title} · {p.status} · latest quiz: {p.latestQuizScore ?? 'Not attempted'}</li>
               ))}
@@ -108,7 +107,7 @@ export default async function DashboardPage() {
                 ? Math.round((course.quizAttempts.filter((a) => a.passed).length / attempts) * 100)
                 : 0;
               return (
-                <li key={course.id}>{course.title}: completions {course.progress.filter((p) => p.status === 'COMPLETED').length} · quiz pass rate {passRate}% · mode {course.quizRequirement === QuizRequirement.OFF ? 'No quiz' : course.quizRequirement}</li>
+                <li key={course.id}>{course.title}: completions {course.progress.filter((p) => p.status === 'COMPLETED').length} · quiz pass rate {passRate}% · mode {course.quizRequirement === 'OFF' ? 'No quiz' : course.quizRequirement}</li>
               );
             })}
           </ul>

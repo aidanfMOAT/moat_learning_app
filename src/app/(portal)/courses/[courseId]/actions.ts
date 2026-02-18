@@ -1,6 +1,5 @@
 'use server';
 
-import { QuizRequirement } from '@prisma/client';
 import { revalidatePath } from 'next/cache';
 import { prisma } from '@/lib/prisma';
 import { submitQuizAttempt } from '@/lib/quiz';
@@ -16,13 +15,24 @@ export async function markStarted(courseId: string) {
   revalidatePath(`/courses/${courseId}`);
 }
 
-export async function completeCourse(courseId: string) {
+export async function completeCourse(courseId: string, formData: FormData) {
   const session = await requireSession();
   const course = await prisma.course.findUnique({ where: { id: courseId } });
   const progress = await prisma.courseProgress.findUnique({ where: { userId_courseId: { userId: session.user.id, courseId } } });
 
   if (!course) throw new Error('Course not found');
-  if (course.quizRequirement === QuizRequirement.REQUIRED && !(progress?.bestQuizScore && progress.bestQuizScore >= (course.passMarkPercent ?? 80))) {
+  
+  // Check acknowledgement requirement
+  if (course.requiresAcknowledgement) {
+    const acknowledgementText = 'I acknowledge I have read and understood the IT Access Control Policy';
+    const acknowledged = String(formData.get('acknowledgement') ?? '') === acknowledgementText;
+    
+    if (!acknowledged) {
+      throw new Error('Please confirm the acknowledgement before completing this course');
+    }
+  }
+
+  if (course.quizRequirement === 'REQUIRED' && !(progress?.bestQuizScore && progress.bestQuizScore >= (course.passMarkPercent ?? 80))) {
     throw new Error('Quiz is required and must be passed first');
   }
 

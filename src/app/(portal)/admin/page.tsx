@@ -1,12 +1,17 @@
-import { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/session';
 
 export default async function AdminPage() {
-  await requireRole([Role.ADMIN]);
+  await requireRole(['ADMIN']);
   const users = await prisma.user.findMany({ include: { team: true }, orderBy: { createdAt: 'asc' } });
   const teams = await prisma.team.findMany();
-  const courses = await prisma.course.findMany({ orderBy: { createdAt: 'desc' } });
+  const courses = await prisma.course.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: {
+      modules: { orderBy: { order: 'asc' } },
+      quizQuestions: { orderBy: { order: 'asc' } }
+    }
+  });
 
   return (
     <main className="grid">
@@ -59,12 +64,65 @@ export default async function AdminPage() {
           </label>
           <button type="submit">Generate Draft Course</button>
         </form>
-        <p style={{ fontSize: '.85rem' }}>Avoid pasting personal data. Generated output is always saved as Draft and never auto-published.</p>
+        <p style={{ fontSize: '.85rem' }}>Avoid pasting personal data. Generated output is always saved as Draft and never auto published.</p>
       </section>
 
       <section className="card">
         <h2>Courses</h2>
-        <ul>{courses.map((c) => <li key={c.id}>{c.title} · {c.status} · {c.quizRequirement}</li>)}</ul>
+        <ul>{courses.map((c) => <li key={c.id}>{c.title} , {c.status} , {c.quizRequirement}</li>)}</ul>
+      </section>
+
+      <section className="card">
+        <h2>Draft Course Editing and Publishing</h2>
+        {courses.filter((course) => course.status === 'DRAFT').map((course) => (
+          <article key={course.id} style={{ borderTop: '1px solid #ddd', paddingTop: '1rem', marginTop: '1rem' }}>
+            <h3>{course.title}</h3>
+            <form method="post" action={`/api/admin/courses/${course.id}`}>
+              <label>Description
+                <textarea name="description" rows={3} defaultValue={course.description} required />
+              </label>
+
+              {course.modules.map((m) => (
+                <label key={m.id}>Module {m.order} , {m.title}
+                  <textarea name={`module_${m.id}_lessonText`} rows={5} defaultValue={m.lessonText} required />
+                </label>
+              ))}
+
+              {course.quizQuestions.map((q) => {
+                const optionsArray = q.options ? JSON.parse(q.options) : [];
+                return (
+                  <div key={q.id}>
+                    <label>Quiz {q.order} question
+                      <input name={`question_${q.id}_text`} defaultValue={q.question} required />
+                    </label>
+                    {q.type === 'MULTIPLE_CHOICE' && optionsArray.length > 0 ? (
+                      <label>Options, one per line
+                        <textarea
+                          name={`question_${q.id}_options`}
+                          rows={4}
+                          defaultValue={optionsArray.join('\n')}
+                          required
+                        />
+                      </label>
+                    ) : null}
+                    <label>Correct answer
+                      <input name={`question_${q.id}_correctAnswer`} defaultValue={q.correctAnswer} required />
+                    </label>
+                  </div>
+                );
+              })}
+
+              <label>Course status
+                <select name="status" defaultValue={course.status}>
+                  <option value="DRAFT">DRAFT</option>
+                  <option value="PUBLISHED">PUBLISHED</option>
+                  <option value="ARCHIVED">ARCHIVED</option>
+                </select>
+              </label>
+              <button type="submit">Save Draft Course</button>
+            </form>
+          </article>
+        ))}
       </section>
     </main>
   );

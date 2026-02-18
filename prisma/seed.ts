@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs';
-import { AssignmentScope, CourseStatus, PrismaClient, QuestionType, QuizRequirement, Role } from '@prisma/client';
+import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
@@ -23,28 +23,28 @@ async function main() {
   const teamSouth = await prisma.team.create({ data: { name: 'South Region' } });
 
   const admin = await prisma.user.create({
-    data: { name: 'Admin User', email: 'admin@moat.local', role: Role.ADMIN, passwordHash: adminPass }
+    data: { name: 'Admin User', email: 'admin@moat.local', role: 'ADMIN', passwordHash: adminPass }
   });
 
   const manager = await prisma.user.create({
-    data: { name: 'Mia Manager', email: 'manager@moat.local', role: Role.MANAGER, teamId: teamNorth.id, passwordHash: managerPass }
+    data: { name: 'Mia Manager', email: 'manager@moat.local', role: 'MANAGER', teamId: teamNorth.id, passwordHash: managerPass }
   });
 
   await prisma.team.update({ where: { id: teamNorth.id }, data: { managerId: manager.id } });
 
   const learner1 = await prisma.user.create({
-    data: { name: 'Lee Learner', email: 'learner1@moat.local', role: Role.LEARNER, teamId: teamNorth.id, passwordHash: learnerPass }
+    data: { name: 'Lee Learner', email: 'learner1@moat.local', role: 'LEARNER', teamId: teamNorth.id, passwordHash: learnerPass }
   });
   const learner2 = await prisma.user.create({
-    data: { name: 'Sam Scholar', email: 'learner2@moat.local', role: Role.LEARNER, teamId: teamSouth.id, passwordHash: learnerPass }
+    data: { name: 'Sam Scholar', email: 'learner2@moat.local', role: 'LEARNER', teamId: teamSouth.id, passwordHash: learnerPass }
   });
 
   const courseOptional = await prisma.course.create({
     data: {
       title: 'Customer Support Basics',
       description: 'Introductory service standards and escalation patterns.',
-      status: CourseStatus.PUBLISHED,
-      quizRequirement: QuizRequirement.OPTIONAL,
+      status: 'PUBLISHED',
+      quizRequirement: 'OPTIONAL',
       passMarkPercent: 70,
       modules: {
         create: [
@@ -58,14 +58,14 @@ async function main() {
             order: 1,
             question: 'First response SLA is within 24 hours.',
             type: 'TRUE_FALSE',
-            options: ['True', 'False'],
+            options: JSON.stringify(['True', 'False']),
             correctAnswer: 'True'
           },
           {
             order: 2,
             question: 'Best escalation owner for billing issue?',
             type: 'MULTIPLE_CHOICE',
-            options: ['Engineering', 'Finance', 'Support', 'Legal'],
+            options: JSON.stringify(['Engineering', 'Finance', 'Support', 'Legal']),
             correctAnswer: 'Finance'
           }
         ]
@@ -77,8 +77,8 @@ async function main() {
     data: {
       title: 'Information Security Essentials',
       description: 'Security policy, data handling, and incident reporting.',
-      status: CourseStatus.PUBLISHED,
-      quizRequirement: QuizRequirement.REQUIRED,
+      status: 'PUBLISHED',
+      quizRequirement: 'REQUIRED',
       passMarkPercent: 80,
       maxQuizAttempts: 3,
       modules: {
@@ -93,14 +93,14 @@ async function main() {
             order: 1,
             question: 'Sharing passwords is allowed if temporary.',
             type: 'TRUE_FALSE',
-            options: ['True', 'False'],
+            options: JSON.stringify(['True', 'False']),
             correctAnswer: 'False'
           },
           {
             order: 2,
             question: 'Where should incidents be reported?',
             type: 'MULTIPLE_CHOICE',
-            options: ['Security channel', 'Social media', 'Ignore', 'Vendor newsletter'],
+            options: JSON.stringify(['Security channel', 'Social media', 'Ignore', 'Vendor newsletter']),
             correctAnswer: 'Security channel'
           }
         ]
@@ -112,8 +112,9 @@ async function main() {
     data: {
       title: 'IT Access Control, MOAT',
       description: 'Practical access control requirements for all staff and third parties working with MOAT systems and data.',
-      status: CourseStatus.DRAFT,
-      quizRequirement: QuizRequirement.OPTIONAL,
+      status: 'DRAFT',
+      quizRequirement: 'OPTIONAL',
+      requiresAcknowledgement: true,
       passMarkPercent: 80,
       maxQuizAttempts: 3,
       modules: {
@@ -150,71 +151,71 @@ async function main() {
           {
             order: 1,
             question: 'Access must be approved before provisioning.',
-            type: QuestionType.TRUE_FALSE,
-            options: ['True', 'False'],
+            type: 'TRUE_FALSE',
+            options: JSON.stringify(['True', 'False']),
             correctAnswer: 'True'
           },
           {
             order: 2,
             question: 'Which option best matches least privilege?',
-            type: QuestionType.MULTIPLE_CHOICE,
-            options: ['All systems access by default', 'Minimum access needed for role', 'Shared admin account for teams', 'No access reviews needed'],
+            type: 'MULTIPLE_CHOICE',
+            options: JSON.stringify(['All systems access by default', 'Minimum access needed for role', 'Shared admin account for teams', 'No access reviews needed']),
             correctAnswer: 'Minimum access needed for role'
           },
           {
             order: 3,
             question: 'RBAC means access is assigned based on job role wherever possible.',
-            type: QuestionType.TRUE_FALSE,
-            options: ['True', 'False'],
+            type: 'TRUE_FALSE',
+            options: JSON.stringify(['True', 'False']),
             correctAnswer: 'True'
           },
           {
             order: 4,
             question: 'When must leavers access be removed?',
-            type: QuestionType.MULTIPLE_CHOICE,
-            options: ['Within 30 days', 'On or before final working day', 'At next quarterly review', 'Only if requested by IT'],
+            type: 'MULTIPLE_CHOICE',
+            options: JSON.stringify(['Within 30 days', 'On or before final working day', 'At next quarterly review', 'Only if requested by IT']),
             correctAnswer: 'On or before final working day'
           },
           {
             order: 5,
             question: 'Privileged accounts can be used for routine emails and admin tasks to save time.',
-            type: QuestionType.TRUE_FALSE,
-            options: ['True', 'False'],
+            type: 'TRUE_FALSE',
+            options: JSON.stringify(['True', 'False']),
             correctAnswer: 'False'
           },
           {
             order: 6,
             question: 'Which remote access practice is required?',
-            type: QuestionType.MULTIPLE_CHOICE,
-            options: ['Use any public device if urgent', 'Use encrypted connection and MFA', 'Disable MFA for faster access', 'Share credentials with contractor'],
+            type: 'MULTIPLE_CHOICE',
+            options: JSON.stringify(['Use any public device if urgent', 'Use encrypted connection and MFA', 'Disable MFA for faster access', 'Share credentials with contractor']),
             correctAnswer: 'Use encrypted connection and MFA'
           },
           {
             order: 7,
             question: 'Access rights must be reviewed at least quarterly.',
-            type: QuestionType.TRUE_FALSE,
-            options: ['True', 'False'],
+            type: 'TRUE_FALSE',
+            options: JSON.stringify(['True', 'False']),
             correctAnswer: 'True'
           },
           {
             order: 8,
             question: 'Which activity should be logged and monitored?',
-            type: QuestionType.MULTIPLE_CHOICE,
-            options: ['Privileged account activity', 'Only successful logins', 'Only public website visits', 'Only password reset emails'],
+            type: 'MULTIPLE_CHOICE',
+            options: JSON.stringify(['Privileged account activity', 'Only successful logins', 'Only public website visits', 'Only password reset emails']),
             correctAnswer: 'Privileged account activity'
           },
           {
             order: 9,
             question: 'Third party access should have defined scope and expiry dates.',
-            type: QuestionType.TRUE_FALSE,
-            options: ['True', 'False'],
+            type: 'TRUE_FALSE',
+            options: JSON.stringify(['True', 'False']),
             correctAnswer: 'True'
           },
           {
             order: 10,
             question: 'What should happen if credential misuse is suspected?',
-            type: QuestionType.MULTIPLE_CHOICE,
-            options: ['Wait for quarterly review', 'Report immediately and disable compromised account pending investigation', 'Ignore first incident', 'Share details on social media'],
+            type: 'MULTIPLE_CHOICE',
+            options: JSON.stringify(['Wait for quarterly review', 'Report immediately and disable compromised account pending investigation', 'Ignore first incident', 'Share details on social media']),
             correctAnswer: 'Report immediately and disable compromised account pending investigation'
           }
         ]
@@ -224,10 +225,10 @@ async function main() {
 
   await prisma.assignment.createMany({
     data: [
-      { courseId: courseOptional.id, scope: AssignmentScope.EVERYONE, assignedById: admin.id },
-      { courseId: courseRequired.id, scope: AssignmentScope.TEAM, teamId: teamNorth.id, assignedById: admin.id },
-      { courseId: courseRequired.id, scope: AssignmentScope.USER, userId: learner2.id, assignedById: admin.id },
-      { courseId: accessControlCourse.id, scope: AssignmentScope.EVERYONE, assignedById: admin.id }
+      { courseId: courseOptional.id, scope: 'EVERYONE', assignedById: admin.id },
+      { courseId: courseRequired.id, scope: 'TEAM', teamId: teamNorth.id, assignedById: admin.id },
+      { courseId: courseRequired.id, scope: 'USER', userId: learner2.id, assignedById: admin.id },
+      { courseId: accessControlCourse.id, scope: 'EVERYONE', assignedById: admin.id }
     ]
   });
 

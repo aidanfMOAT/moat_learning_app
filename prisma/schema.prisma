@@ -3,43 +3,8 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
-}
-
-enum Role {
-  ADMIN
-  MANAGER
-  LEARNER
-}
-
-enum CourseStatus {
-  DRAFT
-  PUBLISHED
-  ARCHIVED
-}
-
-enum AssignmentScope {
-  USER
-  TEAM
-  EVERYONE
-}
-
-enum ProgressStatus {
-  NOT_STARTED
-  IN_PROGRESS
-  COMPLETED
-}
-
-enum QuizRequirement {
-  OFF
-  OPTIONAL
-  REQUIRED
-}
-
-enum QuestionType {
-  MULTIPLE_CHOICE
-  TRUE_FALSE
 }
 
 model User {
@@ -49,7 +14,7 @@ model User {
   emailVerified  DateTime?
   passwordHash   String?
   image          String?
-  role           Role                @default(LEARNER)
+  role           String              @default("LEARNER")
   teamId         String?
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
@@ -77,10 +42,11 @@ model Course {
   id              String             @id @default(cuid())
   title           String
   description     String
-  status          CourseStatus       @default(DRAFT)
-  quizRequirement QuizRequirement    @default(OFF)
-  passMarkPercent Int?
-  maxQuizAttempts Int?
+  status               String             @default("DRAFT")
+  quizRequirement      String             @default("OFF")
+  requiresAcknowledgement Boolean         @default(false)
+  passMarkPercent      Int?
+  maxQuizAttempts      Int?
   createdAt       DateTime           @default(now())
   updatedAt       DateTime           @updatedAt
   modules         Module[]
@@ -106,7 +72,7 @@ model Module {
 model Assignment {
   id          String          @id @default(cuid())
   courseId    String
-  scope       AssignmentScope
+  scope       String
   userId      String?
   teamId      String?
   dueDate     DateTime?
@@ -122,7 +88,7 @@ model CourseProgress {
   id             String         @id @default(cuid())
   userId         String
   courseId       String
-  status         ProgressStatus @default(NOT_STARTED)
+  status         String         @default("NOT_STARTED")
   completionDate DateTime?
   startedAt      DateTime?
   lastActivityAt DateTime?
@@ -141,8 +107,8 @@ model QuizQuestion {
   id            String       @id @default(cuid())
   courseId      String
   question      String
-  type          QuestionType
-  options       Json?
+  type          String
+  options       String?
   correctAnswer String
   order         Int
   course        Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
@@ -167,12 +133,12 @@ model Account {
   type              String
   provider          String
   providerAccountId String
-  refresh_token     String? @db.Text
-  access_token      String? @db.Text
+  refresh_token     String?
+  access_token      String?
   expires_at        Int?
   token_type        String?
   scope             String?
-  id_token          String? @db.Text
+  id_token          String?
   session_state     String?
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)

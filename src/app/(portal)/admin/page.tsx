@@ -1,9 +1,8 @@
-import { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/session';
 
 export default async function AdminPage() {
-  await requireRole([Role.ADMIN]);
+  await requireRole(['ADMIN']);
   const users = await prisma.user.findMany({ include: { team: true }, orderBy: { createdAt: 'asc' } });
   const teams = await prisma.team.findMany();
   const courses = await prisma.course.findMany({
@@ -89,26 +88,29 @@ export default async function AdminPage() {
                 </label>
               ))}
 
-              {course.quizQuestions.map((q) => (
-                <div key={q.id}>
-                  <label>Quiz {q.order} question
-                    <input name={`question_${q.id}_text`} defaultValue={q.question} required />
-                  </label>
-                  {Array.isArray(q.options) ? (
-                    <label>Options, one per line
-                      <textarea
-                        name={`question_${q.id}_options`}
-                        rows={4}
-                        defaultValue={(q.options as string[]).join('\n')}
-                        required
-                      />
+              {course.quizQuestions.map((q) => {
+                const optionsArray = q.options ? JSON.parse(q.options) : [];
+                return (
+                  <div key={q.id}>
+                    <label>Quiz {q.order} question
+                      <input name={`question_${q.id}_text`} defaultValue={q.question} required />
                     </label>
-                  ) : null}
-                  <label>Correct answer
-                    <input name={`question_${q.id}_correctAnswer`} defaultValue={q.correctAnswer} required />
-                  </label>
-                </div>
-              ))}
+                    {q.type === 'MULTIPLE_CHOICE' && optionsArray.length > 0 ? (
+                      <label>Options, one per line
+                        <textarea
+                          name={`question_${q.id}_options`}
+                          rows={4}
+                          defaultValue={optionsArray.join('\n')}
+                          required
+                        />
+                      </label>
+                    ) : null}
+                    <label>Correct answer
+                      <input name={`question_${q.id}_correctAnswer`} defaultValue={q.correctAnswer} required />
+                    </label>
+                  </div>
+                );
+              })}
 
               <label>Course status
                 <select name="status" defaultValue={course.status}>

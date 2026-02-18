@@ -59,3 +59,9 @@ npm test
 - For Postgres deployment, set:
   - `DATABASE_PROVIDER="postgresql"`
   - `DATABASE_URL="postgresql://..."`
+
+## Draft policy course after seed
+- Run seed, then sign in as Admin, open `/admin`, and go to **Draft Course Editing and Publishing**.
+- Find `IT Access Control, MOAT` in Draft state.
+- Review and edit module lesson text and quiz questions as needed.
+- Set **Course status** to `PUBLISHED` and save to publish.

@@ -18,6 +18,8 @@ export default async function CourseDetail({ params }: { params: { courseId: str
 
   if (!course) notFound();
   const progress = course.progress[0];
+  const acknowledgementText = 'I acknowledge I have read and understood the IT Access Control Policy';
+  const requiresAcknowledgement = course.title === 'IT Access Control, MOAT';
 
   return (
     <main className="grid">
@@ -26,7 +28,14 @@ export default async function CourseDetail({ params }: { params: { courseId: str
         <p>{course.description}</p>
         <p>Status: <span className="badge">{progress?.status ?? 'NOT_STARTED'}</span></p>
         <form action={async () => { 'use server'; await markStarted(course.id); }} style={{ display: 'inline-block', marginRight: '.6rem' }}><button type="submit">Mark In Progress</button></form>
-        <form action={async () => { 'use server'; await completeCourse(course.id); }} style={{ display: 'inline-block' }}><button type="submit">Mark Completed</button></form>
+        <form action={async (fd) => { 'use server'; await completeCourse(course.id, fd); }} style={{ display: 'inline-block' }}>
+          {requiresAcknowledgement ? (
+            <label>
+              <input type="checkbox" name="acknowledgement" value={acknowledgementText} required /> {acknowledgementText}
+            </label>
+          ) : null}
+          <button type="submit">Mark Completed</button>
+        </form>
       </section>
 
       <section className="card">

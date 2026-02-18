@@ -1,0 +1,197 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = env("DATABASE_PROVIDER")
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  ADMIN
+  MANAGER
+  LEARNER
+}
+
+enum CourseStatus {
+  DRAFT
+  PUBLISHED
+  ARCHIVED
+}
+
+enum AssignmentScope {
+  USER
+  TEAM
+  EVERYONE
+}
+
+enum ProgressStatus {
+  NOT_STARTED
+  IN_PROGRESS
+  COMPLETED
+}
+
+enum QuizRequirement {
+  OFF
+  OPTIONAL
+  REQUIRED
+}
+
+enum QuestionType {
+  MULTIPLE_CHOICE
+  TRUE_FALSE
+}
+
+model User {
+  id             String              @id @default(cuid())
+  name           String?
+  email          String?             @unique
+  emailVerified  DateTime?
+  passwordHash   String?
+  image          String?
+  role           Role                @default(LEARNER)
+  teamId         String?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  accounts       Account[]
+  sessions       Session[]
+  team           Team?               @relation(fields: [teamId], references: [id])
+  managedTeam    Team[]              @relation("ManagedBy")
+  assignments    Assignment[]        @relation("AssignedBy")
+  userAssignments Assignment[]       @relation("AssignmentUser")
+  progress       CourseProgress[]
+  attempts       QuizAttempt[]
+}
+
+model Team {
+  id          String       @id @default(cuid())
+  name        String       @unique
+  managerId   String?
+  manager     User?        @relation("ManagedBy", fields: [managerId], references: [id])
+  users       User[]
+  assignments Assignment[]
+  createdAt   DateTime     @default(now())
+}
+
+model Course {
+  id              String             @id @default(cuid())
+  title           String
+  description     String
+  status          CourseStatus       @default(DRAFT)
+  quizRequirement QuizRequirement    @default(OFF)
+  passMarkPercent Int?
+  maxQuizAttempts Int?
+  createdAt       DateTime           @default(now())
+  updatedAt       DateTime           @updatedAt
+  modules         Module[]
+  assignments     Assignment[]
+  progress        CourseProgress[]
+  quizQuestions   QuizQuestion[]
+  quizAttempts    QuizAttempt[]
+}
+
+model Module {
+  id          String   @id @default(cuid())
+  courseId    String
+  title       String
+  order       Int
+  lessonText  String
+  resourceUrl String?
+  videoUrl    String?
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, order])
+}
+
+model Assignment {
+  id          String          @id @default(cuid())
+  courseId    String
+  scope       AssignmentScope
+  userId      String?
+  teamId      String?
+  dueDate     DateTime?
+  assignedById String
+  createdAt   DateTime        @default(now())
+  course      Course          @relation(fields: [courseId], references: [id], onDelete: Cascade)
+  user        User?           @relation("AssignmentUser", fields: [userId], references: [id], onDelete: Cascade)
+  team        Team?           @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  assignedBy  User            @relation("AssignedBy", fields: [assignedById], references: [id])
+}
+
+model CourseProgress {
+  id             String         @id @default(cuid())
+  userId         String
+  courseId       String
+  status         ProgressStatus @default(NOT_STARTED)
+  completionDate DateTime?
+  startedAt      DateTime?
+  lastActivityAt DateTime?
+  createdAt      DateTime       @default(now())
+  updatedAt      DateTime       @updatedAt
+  bestQuizScore  Int?
+  latestQuizScore Int?
+  quizAttemptCount Int          @default(0)
+  user           User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course         Course         @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, courseId])
+}
+
+model QuizQuestion {
+  id            String       @id @default(cuid())
+  courseId      String
+  question      String
+  type          QuestionType
+  options       Json?
+  correctAnswer String
+  order         Int
+  course        Course       @relation(fields: [courseId], references: [id], onDelete: Cascade)
+
+  @@unique([courseId, order])
+}
+
+model QuizAttempt {
+  id          String   @id @default(cuid())
+  userId      String
+  courseId    String
+  score       Int
+  passed      Boolean
+  createdAt   DateTime @default(now())
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
+}
+
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String? @db.Text
+  access_token      String? @db.Text
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String? @db.Text
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+}
+
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+}
+
+model VerificationToken {
+  identifier String
+  token      String   @unique
+  expires    DateTime
+
+  @@unique([identifier, token])
+}

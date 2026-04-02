@@ -1,4 +1,4 @@
-import { QuestionType, QuizRequirement, Role } from '@prisma/client';
+import { QuestionType, Role } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { generateCourseDraftFromText } from '@/lib/ai-studio';
 import { prisma } from '@/lib/prisma';
@@ -9,7 +9,7 @@ export async function POST(req: Request) {
   const formData = await req.formData();
   const sourceText = String(formData.get('sourceText') ?? '').trim();
   const providedTitle = String(formData.get('title') ?? '').trim();
-  const quizRequirement = (String(formData.get('quizRequirement') ?? 'OPTIONAL') as QuizRequirement);
+  const quizRequirement = String(formData.get('quizRequirement') ?? 'OPTIONAL');
 
   if (!sourceText) return NextResponse.json({ error: 'sourceText required' }, { status: 400 });
 

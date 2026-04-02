@@ -1,4 +1,3 @@
-import { ProgressStatus, QuizRequirement } from '@prisma/client';
 import { prisma } from './prisma';
 
 export type SubmittedAnswer = { questionId: string; answer: string };
@@ -27,12 +26,12 @@ export async function submitQuizAttempt(userId: string, courseId: string, answer
   });
 
   if (!course) throw new Error('Course not found');
-  if (course.quizRequirement === QuizRequirement.OFF) throw new Error('Quiz is disabled for this course');
+  if (course.quizRequirement === 'OFF') throw new Error('Quiz is disabled for this course');
 
   const progress = await prisma.courseProgress.upsert({
     where: { userId_courseId: { userId, courseId } },
-    create: { userId, courseId, status: ProgressStatus.IN_PROGRESS, startedAt: new Date(), lastActivityAt: new Date() },
-    update: { status: ProgressStatus.IN_PROGRESS, lastActivityAt: new Date() }
+    create: { userId, courseId, status: 'IN_PROGRESS', startedAt: new Date(), lastActivityAt: new Date() },
+    update: { status: 'IN_PROGRESS', lastActivityAt: new Date() }
   });
 
   if (!canAttempt(progress.quizAttemptCount, course.maxQuizAttempts)) {
@@ -58,11 +57,11 @@ export async function submitQuizAttempt(userId: string, courseId: string, answer
       quizAttemptCount: attemptCount,
       lastActivityAt: new Date(),
       status:
-        passed || course.quizRequirement !== QuizRequirement.REQUIRED
-          ? ProgressStatus.COMPLETED
-          : ProgressStatus.IN_PROGRESS,
+        passed || course.quizRequirement !== 'REQUIRED'
+          ? 'COMPLETED'
+          : 'IN_PROGRESS',
       completionDate:
-        passed || course.quizRequirement !== QuizRequirement.REQUIRED ? new Date() : null
+        passed || course.quizRequirement !== 'REQUIRED' ? new Date() : null
     }
   });
 

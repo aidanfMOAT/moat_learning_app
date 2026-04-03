@@ -1,11 +1,11 @@
-import { QuestionType, Role } from '@prisma/client';
+import { QuestionType } from '@prisma/client';
 import { NextResponse } from 'next/server';
 import { generateCourseDraftFromText } from '@/lib/ai-studio';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/session';
 
 export async function POST(req: Request) {
-  await requireRole([Role.ADMIN]);
+  await requireRole(['ADMIN']);
   const formData = await req.formData();
   const sourceText = String(formData.get('sourceText') ?? '').trim();
   const providedTitle = String(formData.get('title') ?? '').trim();

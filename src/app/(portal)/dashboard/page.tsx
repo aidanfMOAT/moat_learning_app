@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { AssignmentScope, Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireSession } from '@/lib/session';
 
@@ -12,9 +11,9 @@ export default async function DashboardPage() {
       assignments: {
         some: {
           OR: [
-            { scope: AssignmentScope.EVERYONE },
-            { scope: AssignmentScope.USER, userId: session.user.id },
-            session.user.teamId ? { scope: AssignmentScope.TEAM, teamId: session.user.teamId } : undefined
+            { scope: 'EVERYONE' },
+            { scope: 'USER', userId: session.user.id },
+            session.user.teamId ? { scope: 'TEAM', teamId: session.user.teamId } : undefined
           ].filter(Boolean) as any
         }
       }
@@ -31,8 +30,8 @@ export default async function DashboardPage() {
     completed: assignedCourses.filter((c) => c.progress[0]?.status === 'COMPLETED').length
   };
 
-  const isManager = session.user.role === Role.MANAGER;
-  const isAdmin = session.user.role === Role.ADMIN;
+  const isManager = session.user.role === 'MANAGER';
+  const isAdmin = session.user.role === 'ADMIN';
 
   const teamReport =
     isManager && session.user.teamId

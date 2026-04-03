@@ -1,9 +1,8 @@
-import { Role } from '@prisma/client';
 import { prisma } from '@/lib/prisma';
 import { requireRole } from '@/lib/session';
 
 export async function GET() {
-  await requireRole([Role.ADMIN]);
+  await requireRole(['ADMIN']);
 
   const rows = await prisma.courseProgress.findMany({
     include: { user: { include: { team: true } }, course: true }

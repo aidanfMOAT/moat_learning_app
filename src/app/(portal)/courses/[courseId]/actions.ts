@@ -24,9 +24,7 @@ export async function completeCourse(courseId: string, formData: FormData) {
   
   // Check acknowledgement requirement
   if (course.requiresAcknowledgement) {
-    const acknowledgementText = 'I acknowledge I have read and understood the IT Access Control Policy';
-    const acknowledged = String(formData.get('acknowledgement') ?? '') === acknowledgementText;
-    
+    const acknowledged = !!formData.get('acknowledgement');
     if (!acknowledged) {
       throw new Error('Please confirm the acknowledgement before completing this course');
     }
@@ -53,4 +51,14 @@ export async function submitQuiz(courseId: string, formData: FormData) {
 
   await submitQuizAttempt(session.user.id, courseId, entries);
   revalidatePath(`/courses/${courseId}`);
+}
+
+export async function submitQuizForResult(
+  courseId: string,
+  answers: { questionId: string; answer: string }[]
+): Promise<{ score: number; passed: boolean; attemptsRemaining: number | null }> {
+  const session = await requireSession();
+  const result = await submitQuizAttempt(session.user.id, courseId, answers);
+  revalidatePath(`/courses/${courseId}`);
+  return result;
 }

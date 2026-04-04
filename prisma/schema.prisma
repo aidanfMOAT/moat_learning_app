@@ -64,6 +64,7 @@ model Module {
   lessonText  String
   resourceUrl String?
   videoUrl    String?
+  imageUrl    String?
   course      Course   @relation(fields: [courseId], references: [id], onDelete: Cascade)
 
   @@unique([courseId, order])

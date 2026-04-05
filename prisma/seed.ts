@@ -3,7 +3,14 @@ import { PrismaClient } from '@prisma/client';
 
 const prisma = new PrismaClient();
 
+function daysAgo(n: number): Date {
+  const d = new Date();
+  d.setDate(d.getDate() - n);
+  return d;
+}
+
 async function main() {
+  await prisma.auditLog.deleteMany();
   await prisma.quizAttempt.deleteMany();
   await prisma.courseProgress.deleteMany();
   await prisma.assignment.deleteMany();
@@ -19,18 +26,24 @@ async function main() {
     bcrypt.hash('Learner123!', 10)
   ]);
 
+  // ── Teams ────────────────────────────────────────────────────────────────
   const teamNorth = await prisma.team.create({ data: { name: 'North Region' } });
   const teamSouth = await prisma.team.create({ data: { name: 'South Region' } });
 
+  // ── Users ────────────────────────────────────────────────────────────────
   const admin = await prisma.user.create({
     data: { name: 'Admin User', email: 'admin@moat.local', role: 'ADMIN', passwordHash: adminPass }
   });
 
-  const manager = await prisma.user.create({
+  const managerNorth = await prisma.user.create({
     data: { name: 'Mia Manager', email: 'manager@moat.local', role: 'MANAGER', teamId: teamNorth.id, passwordHash: managerPass }
   });
+  const managerSouth = await prisma.user.create({
+    data: { name: 'Marcus Manager', email: 'manager2@moat.local', role: 'MANAGER', teamId: teamSouth.id, passwordHash: managerPass }
+  });
 
-  await prisma.team.update({ where: { id: teamNorth.id }, data: { managerId: manager.id } });
+  await prisma.team.update({ where: { id: teamNorth.id }, data: { managerId: managerNorth.id } });
+  await prisma.team.update({ where: { id: teamSouth.id }, data: { managerId: managerSouth.id } });
 
   const learner1 = await prisma.user.create({
     data: { name: 'Lee Learner', email: 'learner1@moat.local', role: 'LEARNER', teamId: teamNorth.id, passwordHash: learnerPass }
@@ -38,7 +51,19 @@ async function main() {
   const learner2 = await prisma.user.create({
     data: { name: 'Sam Scholar', email: 'learner2@moat.local', role: 'LEARNER', teamId: teamSouth.id, passwordHash: learnerPass }
   });
+  const learner3 = await prisma.user.create({
+    data: { name: 'Alex Apprentice', email: 'learner3@moat.local', role: 'LEARNER', teamId: teamNorth.id, passwordHash: learnerPass }
+  });
+  const learner4 = await prisma.user.create({
+    data: { name: 'Jordan Jones', email: 'learner4@moat.local', role: 'LEARNER', teamId: teamSouth.id, passwordHash: learnerPass }
+  });
+  const learner5 = await prisma.user.create({
+    data: { name: 'Riley Reader', email: 'learner5@moat.local', role: 'LEARNER', teamId: teamNorth.id, passwordHash: learnerPass }
+  });
 
+  const allLearners = [learner1, learner2, learner3, learner4, learner5];
+
+  // ── Courses ──────────────────────────────────────────────────────────────
   const courseOptional = await prisma.course.create({
     data: {
       title: 'Customer Support Basics',
@@ -54,20 +79,8 @@ async function main() {
       },
       quizQuestions: {
         create: [
-          {
-            order: 1,
-            question: 'First response SLA is within 24 hours.',
-            type: 'TRUE_FALSE',
-            options: JSON.stringify(['True', 'False']),
-            correctAnswer: 'True'
-          },
-          {
-            order: 2,
-            question: 'Best escalation owner for billing issue?',
-            type: 'MULTIPLE_CHOICE',
-            options: JSON.stringify(['Engineering', 'Finance', 'Support', 'Legal']),
-            correctAnswer: 'Finance'
-          }
+          { order: 1, question: 'First response SLA is within 24 hours.', type: 'TRUE_FALSE', options: JSON.stringify(['True', 'False']), correctAnswer: 'True' },
+          { order: 2, question: 'Best escalation owner for billing issue?', type: 'MULTIPLE_CHOICE', options: JSON.stringify(['Engineering', 'Finance', 'Support', 'Legal']), correctAnswer: 'Finance' }
         ]
       }
     }
@@ -89,20 +102,36 @@ async function main() {
       },
       quizQuestions: {
         create: [
-          {
-            order: 1,
-            question: 'Sharing passwords is allowed if temporary.',
-            type: 'TRUE_FALSE',
-            options: JSON.stringify(['True', 'False']),
-            correctAnswer: 'False'
-          },
-          {
-            order: 2,
-            question: 'Where should incidents be reported?',
-            type: 'MULTIPLE_CHOICE',
-            options: JSON.stringify(['Security channel', 'Social media', 'Ignore', 'Vendor newsletter']),
-            correctAnswer: 'Security channel'
-          }
+          { order: 1, question: 'Sharing passwords is allowed if temporary.', type: 'TRUE_FALSE', options: JSON.stringify(['True', 'False']), correctAnswer: 'False' },
+          { order: 2, question: 'Where should incidents be reported?', type: 'MULTIPLE_CHOICE', options: JSON.stringify(['Security channel', 'Social media', 'Ignore', 'Vendor newsletter']), correctAnswer: 'Security channel' }
+        ]
+      }
+    }
+  });
+
+  const courseESG = await prisma.course.create({
+    data: {
+      title: 'ESG Awareness & Responsibilities',
+      description: 'Environmental, social and governance obligations every employee must understand.',
+      status: 'PUBLISHED',
+      quizRequirement: 'REQUIRED',
+      requiresAcknowledgement: true,
+      passMarkPercent: 75,
+      maxQuizAttempts: 3,
+      modules: {
+        create: [
+          { order: 1, title: 'What is ESG?', lessonText: 'ESG stands for Environmental, Social, and Governance. These three pillars guide responsible business conduct.' },
+          { order: 2, title: 'Environmental Obligations', lessonText: 'Reduce carbon footprint, report emissions accurately, and avoid greenwashing.' },
+          { order: 3, title: 'Social Responsibilities', lessonText: 'Fair treatment of employees, supply-chain ethics, and community engagement.' },
+          { order: 4, title: 'Governance Standards', lessonText: 'Anti-bribery, conflicts of interest, accurate reporting, and whistleblower protections.' }
+        ]
+      },
+      quizQuestions: {
+        create: [
+          { order: 1, question: 'ESG stands for Environmental, Social, and Governance.', type: 'TRUE_FALSE', options: JSON.stringify(['True', 'False']), correctAnswer: 'True' },
+          { order: 2, question: 'Greenwashing refers to?', type: 'MULTIPLE_CHOICE', options: JSON.stringify(['Accurate sustainability reporting', 'Misleading environmental claims', 'A recycling programme', 'Carbon offset trading']), correctAnswer: 'Misleading environmental claims' },
+          { order: 3, question: 'Accepting gifts from suppliers over the policy limit is acceptable if kept confidential.', type: 'TRUE_FALSE', options: JSON.stringify(['True', 'False']), correctAnswer: 'False' },
+          { order: 4, question: 'Who should you report a governance concern to first?', type: 'MULTIPLE_CHOICE', options: JSON.stringify(['Your direct manager or via the whistleblower channel', 'Social media', 'No one – wait for annual review', 'A competitor']), correctAnswer: 'Your direct manager or via the whistleblower channel' }
         ]
       }
     }
@@ -112,137 +141,196 @@ async function main() {
     data: {
       title: 'IT Access Control, MOAT',
       description: 'Practical access control requirements for all staff and third parties working with MOAT systems and data.',
-      status: 'DRAFT',
+      status: 'PUBLISHED',
       quizRequirement: 'OPTIONAL',
       requiresAcknowledgement: true,
       passMarkPercent: 80,
       maxQuizAttempts: 3,
       modules: {
         create: [
-          {
-            order: 1,
-            title: 'Scope, purpose, and your responsibilities',
-            lessonText: `This policy applies across MOAT entities, and applies to employees, contractors, consultants, associates, and third parties with system access.\n\nWhat this means in practice:\n, Access must be approved before use\n, Access must match your current role and business need\n, Access must be removed quickly when no longer needed\n, You are accountable for how your account is used\n\nWhat you must do\n, Use only the systems you are authorised to access\n, Ask your line manager to request access changes, do not bypass the process\n, Report any access concerns immediately`
-          },
-          {
-            order: 2,
-            title: 'Core access control principles',
-            lessonText: `MOAT applies core principles to reduce risk and protect confidentiality, integrity, and availability of information.\n\nKey terms\n, Least privilege, you receive only the minimum access needed\n, RBAC, access is granted by job role rather than by individual preference\n, Segregation of duties, critical high risk steps are split across people\n, Privileged access, elevated administrative rights with extra controls\n, MFA, multi factor authentication to strengthen account security\n\nWhat you must do\n, Request only the minimum access needed for your duties\n, Do not combine conflicting high risk tasks without approval\n, Never share credentials, use your unique account only`
-          },
-          {
-            order: 3,
-            title: 'Access requests, provisioning, changes, and leavers',
-            lessonText: `Access lifecycle controls ensure access stays appropriate from joiner to leaver.\n\nAccess request and approval requirements\n, Line manager raises the request\n, Request includes business justification\n, Approval is completed before provisioning\n, Records are retained for audit\n\nProvisioning and change requirements\n, Only authorised personnel can provision access\n, Default passwords must be changed at first sign in\n, Access changes must be completed promptly after role changes\n, Temporary access must be removed at expiry\n\nLeavers and urgent revocation\n, Remove access immediately when employment or contract ends\n, Remove access when no longer required\n, Disable access if a security concern exists\n, Leavers access must be removed by final working day\n\nWhat you must do\n, Notify line managers and system owners quickly when responsibilities change\n, Check temporary access expiry dates and request removal on time\n, Escalate overdue revocation immediately`
-          },
-          {
-            order: 4,
-            title: 'Authentication, privileged access, and remote access',
-            lessonText: `Strong authentication and controlled privileged access reduce account compromise risk.\n\nAuthentication requirements\n, Unique user IDs\n, MFA for cloud and remote access\n, Passwords must meet policy standards\n, Account lockout follows repeated failed sign in attempts\n\nPrivileged access requirements\n, Formal authorisation is required\n, Access is restricted to named individuals\n, Activity is logged and monitored\n, Access is reviewed quarterly\n, Privileged accounts are not for routine day to day tasks\n\nRemote access requirements\n, Use secure encrypted connections\n, Use approved devices only\n, MFA is mandatory\n, Activity is monitored for anomalies\n, Public or shared devices must not be used for sensitive systems\n\nWhat you must do\n, Use MFA every time it is required, do not attempt workarounds\n, Use standard account for normal work, use privileged access only when authorised\n, Stop and report if you are asked to use a public or shared device for sensitive access`
-          },
-          {
-            order: 5,
-            title: 'Reviews, monitoring, third parties, and incident response',
-            lessonText: `Regular review and monitoring help identify inappropriate access and reduce exposure.\n\nQuarterly access review checks\n, Access is still appropriate\n, Privileged access remains justified\n, Leavers have been removed\n, No orphaned accounts exist\n, Review outcomes are documented\n\nLogging and monitoring scope\n, Login attempts\n, Failed authentication attempts\n, Privileged account activity\n, Access changes\n\nThird party access controls\n, Access is contractually governed\n, Scope and duration are limited\n, Same security standards apply\n, Access is revoked at contract end\n, Temporary access has a defined expiry date\n\nSecurity incidents and enforcement\n, Suspected misuse, unauthorised access, or privilege escalation must be reported immediately\n, Compromised accounts are disabled pending investigation\n, Non compliance may lead to disciplinary action, access suspension, contract termination, or regulatory reporting\n\nWhat you must do\n, Complete quarterly review tasks if you are assigned as a reviewer\n, Report suspicious access activity immediately\n, Ensure third party access you sponsor has clear expiry and timely revocation`
-          }
+          { order: 1, title: 'Scope, purpose, and your responsibilities', lessonText: 'This policy applies across MOAT entities, and applies to employees, contractors, consultants, associates, and third parties with system access.' },
+          { order: 2, title: 'Core access control principles', lessonText: 'MOAT applies core principles to reduce risk and protect confidentiality, integrity, and availability of information.' },
+          { order: 3, title: 'Access requests, provisioning, changes, and leavers', lessonText: 'Access lifecycle controls ensure access stays appropriate from joiner to leaver.' },
+          { order: 4, title: 'Authentication, privileged access, and remote access', lessonText: 'Strong authentication and controlled privileged access reduce account compromise risk.' },
+          { order: 5, title: 'Reviews, monitoring, third parties, and incident response', lessonText: 'Regular review and monitoring help identify inappropriate access and reduce exposure.' }
         ]
       },
       quizQuestions: {
         create: [
-          {
-            order: 1,
-            question: 'Access must be approved before provisioning.',
-            type: 'TRUE_FALSE',
-            options: JSON.stringify(['True', 'False']),
-            correctAnswer: 'True'
-          },
-          {
-            order: 2,
-            question: 'Which option best matches least privilege?',
-            type: 'MULTIPLE_CHOICE',
-            options: JSON.stringify(['All systems access by default', 'Minimum access needed for role', 'Shared admin account for teams', 'No access reviews needed']),
-            correctAnswer: 'Minimum access needed for role'
-          },
-          {
-            order: 3,
-            question: 'RBAC means access is assigned based on job role wherever possible.',
-            type: 'TRUE_FALSE',
-            options: JSON.stringify(['True', 'False']),
-            correctAnswer: 'True'
-          },
-          {
-            order: 4,
-            question: 'When must leavers access be removed?',
-            type: 'MULTIPLE_CHOICE',
-            options: JSON.stringify(['Within 30 days', 'On or before final working day', 'At next quarterly review', 'Only if requested by IT']),
-            correctAnswer: 'On or before final working day'
-          },
-          {
-            order: 5,
-            question: 'Privileged accounts can be used for routine emails and admin tasks to save time.',
-            type: 'TRUE_FALSE',
-            options: JSON.stringify(['True', 'False']),
-            correctAnswer: 'False'
-          },
-          {
-            order: 6,
-            question: 'Which remote access practice is required?',
-            type: 'MULTIPLE_CHOICE',
-            options: JSON.stringify(['Use any public device if urgent', 'Use encrypted connection and MFA', 'Disable MFA for faster access', 'Share credentials with contractor']),
-            correctAnswer: 'Use encrypted connection and MFA'
-          },
-          {
-            order: 7,
-            question: 'Access rights must be reviewed at least quarterly.',
-            type: 'TRUE_FALSE',
-            options: JSON.stringify(['True', 'False']),
-            correctAnswer: 'True'
-          },
-          {
-            order: 8,
-            question: 'Which activity should be logged and monitored?',
-            type: 'MULTIPLE_CHOICE',
-            options: JSON.stringify(['Privileged account activity', 'Only successful logins', 'Only public website visits', 'Only password reset emails']),
-            correctAnswer: 'Privileged account activity'
-          },
-          {
-            order: 9,
-            question: 'Third party access should have defined scope and expiry dates.',
-            type: 'TRUE_FALSE',
-            options: JSON.stringify(['True', 'False']),
-            correctAnswer: 'True'
-          },
-          {
-            order: 10,
-            question: 'What should happen if credential misuse is suspected?',
-            type: 'MULTIPLE_CHOICE',
-            options: JSON.stringify(['Wait for quarterly review', 'Report immediately and disable compromised account pending investigation', 'Ignore first incident', 'Share details on social media']),
-            correctAnswer: 'Report immediately and disable compromised account pending investigation'
-          }
+          { order: 1, question: 'Access must be approved before provisioning.', type: 'TRUE_FALSE', options: JSON.stringify(['True', 'False']), correctAnswer: 'True' },
+          { order: 2, question: 'Which option best matches least privilege?', type: 'MULTIPLE_CHOICE', options: JSON.stringify(['All systems access by default', 'Minimum access needed for role', 'Shared admin account for teams', 'No access reviews needed']), correctAnswer: 'Minimum access needed for role' },
+          { order: 3, question: 'RBAC means access is assigned based on job role wherever possible.', type: 'TRUE_FALSE', options: JSON.stringify(['True', 'False']), correctAnswer: 'True' },
+          { order: 4, question: 'When must leavers access be removed?', type: 'MULTIPLE_CHOICE', options: JSON.stringify(['Within 30 days', 'On or before final working day', 'At next quarterly review', 'Only if requested by IT']), correctAnswer: 'On or before final working day' },
+          { order: 5, question: 'Privileged accounts can be used for routine emails and admin tasks to save time.', type: 'TRUE_FALSE', options: JSON.stringify(['True', 'False']), correctAnswer: 'False' }
         ]
       }
     }
   });
 
+  // ── Assignments ──────────────────────────────────────────────────────────
   await prisma.assignment.createMany({
     data: [
       { courseId: courseOptional.id, scope: 'EVERYONE', assignedById: admin.id },
-      { courseId: courseRequired.id, scope: 'TEAM', teamId: teamNorth.id, assignedById: admin.id },
-      { courseId: courseRequired.id, scope: 'USER', userId: learner2.id, assignedById: admin.id },
+      { courseId: courseRequired.id, scope: 'EVERYONE', assignedById: admin.id },
+      { courseId: courseESG.id, scope: 'EVERYONE', assignedById: admin.id },
       { courseId: accessControlCourse.id, scope: 'EVERYONE', assignedById: admin.id }
     ]
   });
 
-  await prisma.courseProgress.createMany({
-    data: [
-      { userId: learner1.id, courseId: courseOptional.id, status: 'IN_PROGRESS', startedAt: new Date(), lastActivityAt: new Date() },
-      { userId: learner2.id, courseId: courseOptional.id, status: 'NOT_STARTED' }
+  // ── Helper to create progress + audit entries ────────────────────────────
+  async function addProgress(
+    userId: string,
+    courseId: string,
+    status: 'NOT_STARTED' | 'IN_PROGRESS' | 'COMPLETED',
+    opts: {
+      startedDaysAgo?: number;
+      completedDaysAgo?: number;
+      quizAttempts?: Array<{ score: number; passed: boolean; daysAgo: number }>;
+      acknowledged?: boolean;
+    } = {}
+  ) {
+    const started = opts.startedDaysAgo !== undefined ? daysAgo(opts.startedDaysAgo) : undefined;
+    const completed = opts.completedDaysAgo !== undefined ? daysAgo(opts.completedDaysAgo) : undefined;
+    const lastActivity = completed ?? started ?? undefined;
+
+    const quizScores = opts.quizAttempts?.map((a) => a.score) ?? [];
+    const bestScore = quizScores.length ? Math.max(...quizScores) : undefined;
+    const latestScore = quizScores.length ? quizScores[quizScores.length - 1] : undefined;
+
+    await prisma.courseProgress.create({
+      data: {
+        userId,
+        courseId,
+        status,
+        startedAt: started,
+        completionDate: completed,
+        lastActivityAt: lastActivity,
+        bestQuizScore: bestScore,
+        latestQuizScore: latestScore,
+        quizAttemptCount: quizScores.length
+      }
+    });
+
+    const auditRows: Array<{ userId: string; courseId: string; event: string; detail?: string; createdAt: Date }> = [];
+
+    if (started) {
+      auditRows.push({ userId, courseId, event: 'COURSE_STARTED', createdAt: started });
+    }
+
+    for (const attempt of opts.quizAttempts ?? []) {
+      await prisma.quizAttempt.create({
+        data: { userId, courseId, score: attempt.score, passed: attempt.passed, createdAt: daysAgo(attempt.daysAgo) }
+      });
+      auditRows.push({
+        userId,
+        courseId,
+        event: attempt.passed ? 'QUIZ_PASSED' : 'QUIZ_FAILED',
+        detail: JSON.stringify({ score: attempt.score, passMark: 80 }),
+        createdAt: daysAgo(attempt.daysAgo)
+      });
+    }
+
+    if (opts.acknowledged && completed) {
+      auditRows.push({ userId, courseId, event: 'ACK_SIGNED', detail: 'Learner confirmed understanding', createdAt: completed });
+    }
+
+    if (completed) {
+      auditRows.push({ userId, courseId, event: 'COURSE_COMPLETED', createdAt: completed });
+    }
+
+    for (const row of auditRows) {
+      await prisma.auditLog.create({ data: row });
+    }
+  }
+
+  // ── Lee Learner (North) – compliant, finished everything ─────────────────
+  await addProgress(learner1.id, courseOptional.id, 'COMPLETED', {
+    startedDaysAgo: 60, completedDaysAgo: 55,
+    quizAttempts: [{ score: 100, passed: true, daysAgo: 56 }]
+  });
+  await addProgress(learner1.id, courseRequired.id, 'COMPLETED', {
+    startedDaysAgo: 50, completedDaysAgo: 44,
+    quizAttempts: [
+      { score: 50, passed: false, daysAgo: 48 },
+      { score: 100, passed: true, daysAgo: 45 }
     ]
+  });
+  await addProgress(learner1.id, courseESG.id, 'COMPLETED', {
+    startedDaysAgo: 30, completedDaysAgo: 25,
+    quizAttempts: [{ score: 75, passed: true, daysAgo: 26 }],
+    acknowledged: true
+  });
+  await addProgress(learner1.id, accessControlCourse.id, 'COMPLETED', {
+    startedDaysAgo: 20, completedDaysAgo: 18,
+    acknowledged: true
+  });
+
+  // ── Sam Scholar (South) – mostly done, one course in progress ────────────
+  await addProgress(learner2.id, courseOptional.id, 'COMPLETED', {
+    startedDaysAgo: 58, completedDaysAgo: 52,
+    quizAttempts: [{ score: 100, passed: true, daysAgo: 53 }]
+  });
+  await addProgress(learner2.id, courseRequired.id, 'COMPLETED', {
+    startedDaysAgo: 45, completedDaysAgo: 40,
+    quizAttempts: [{ score: 100, passed: true, daysAgo: 41 }]
+  });
+  await addProgress(learner2.id, courseESG.id, 'IN_PROGRESS', {
+    startedDaysAgo: 10,
+    quizAttempts: [{ score: 50, passed: false, daysAgo: 8 }]
+  });
+  await addProgress(learner2.id, accessControlCourse.id, 'NOT_STARTED');
+
+  // ── Alex Apprentice (North) – new starter, just begun ───────────────────
+  await addProgress(learner3.id, courseOptional.id, 'IN_PROGRESS', { startedDaysAgo: 5 });
+  await addProgress(learner3.id, courseRequired.id, 'NOT_STARTED');
+  await addProgress(learner3.id, courseESG.id, 'NOT_STARTED');
+  await addProgress(learner3.id, accessControlCourse.id, 'NOT_STARTED');
+
+  // ── Jordan Jones (South) – finished two, overdue on security ────────────
+  await addProgress(learner4.id, courseOptional.id, 'COMPLETED', {
+    startedDaysAgo: 70, completedDaysAgo: 65,
+    quizAttempts: [{ score: 100, passed: true, daysAgo: 66 }]
+  });
+  await addProgress(learner4.id, courseRequired.id, 'IN_PROGRESS', {
+    startedDaysAgo: 40,
+    quizAttempts: [
+      { score: 60, passed: false, daysAgo: 38 },
+      { score: 70, passed: false, daysAgo: 35 }
+    ]
+  });
+  await addProgress(learner4.id, courseESG.id, 'NOT_STARTED');
+  await addProgress(learner4.id, accessControlCourse.id, 'COMPLETED', {
+    startedDaysAgo: 55, completedDaysAgo: 50,
+    acknowledged: true
+  });
+
+  // ── Riley Reader (North) – exemplary record ──────────────────────────────
+  await addProgress(learner5.id, courseOptional.id, 'COMPLETED', {
+    startedDaysAgo: 80, completedDaysAgo: 75,
+    quizAttempts: [{ score: 100, passed: true, daysAgo: 76 }]
+  });
+  await addProgress(learner5.id, courseRequired.id, 'COMPLETED', {
+    startedDaysAgo: 74, completedDaysAgo: 70,
+    quizAttempts: [{ score: 100, passed: true, daysAgo: 71 }]
+  });
+  await addProgress(learner5.id, courseESG.id, 'COMPLETED', {
+    startedDaysAgo: 35, completedDaysAgo: 30,
+    quizAttempts: [{ score: 75, passed: true, daysAgo: 31 }],
+    acknowledged: true
+  });
+  await addProgress(learner5.id, accessControlCourse.id, 'COMPLETED', {
+    startedDaysAgo: 28, completedDaysAgo: 24,
+    acknowledged: true
   });
 
   console.log('Seed complete');
-  console.log('Admin login: admin@moat.local / Admin123!');
-  console.log('Manager login: manager@moat.local / Manager123!');
-  console.log('Learner login: learner1@moat.local / Learner123!');
+  console.log('Admin:    admin@moat.local    / Admin123!');
+  console.log('Manager:  manager@moat.local  / Manager123!  (North Region)');
+  console.log('Manager:  manager2@moat.local / Manager123!  (South Region)');
+  for (let i = 1; i <= 5; i++) {
+    const names = ['Lee Learner', 'Sam Scholar', 'Alex Apprentice', 'Jordan Jones', 'Riley Reader'];
+    console.log(`Learner ${i}: learner${i}@moat.local / Learner123!  (${names[i - 1]})`);
+  }
 }
 
 main().finally(async () => prisma.$disconnect());

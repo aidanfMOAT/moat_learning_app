@@ -65,5 +65,14 @@ export async function submitQuizAttempt(userId: string, courseId: string, answer
     }
   });
 
+  await prisma.auditLog.create({
+    data: {
+      userId,
+      courseId,
+      event: passed ? 'QUIZ_PASSED' : 'QUIZ_FAILED',
+      detail: JSON.stringify({ score, passMark: passMark, attemptNumber: attemptCount })
+    }
+  });
+
   return { attempt, score, passed, attemptsRemaining: course.maxQuizAttempts ? course.maxQuizAttempts - attemptCount : null };
 }

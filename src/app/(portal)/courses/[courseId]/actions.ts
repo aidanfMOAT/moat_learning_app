@@ -12,6 +12,9 @@ export async function markStarted(courseId: string) {
     create: { userId: session.user.id, courseId, status: 'IN_PROGRESS', startedAt: new Date(), lastActivityAt: new Date() },
     update: { status: 'IN_PROGRESS', lastActivityAt: new Date() }
   });
+  await prisma.auditLog.create({
+    data: { userId: session.user.id, courseId, event: 'COURSE_STARTED' }
+  });
   revalidatePath(`/courses/${courseId}`);
 }
 
@@ -21,13 +24,10 @@ export async function completeCourse(courseId: string, formData: FormData) {
   const progress = await prisma.courseProgress.findUnique({ where: { userId_courseId: { userId: session.user.id, courseId } } });
 
   if (!course) throw new Error('Course not found');
-  
-  // Check acknowledgement requirement
-  if (course.requiresAcknowledgement) {
-    const acknowledged = !!formData.get('acknowledgement');
-    if (!acknowledged) {
-      throw new Error('Please confirm the acknowledgement before completing this course');
-    }
+
+  const acknowledged = !!formData.get('acknowledgement');
+  if (course.requiresAcknowledgement && !acknowledged) {
+    throw new Error('Please confirm the acknowledgement before completing this course');
   }
 
   if (course.quizRequirement === 'REQUIRED' && !(progress?.bestQuizScore && progress.bestQuizScore >= (course.passMarkPercent ?? 80))) {
@@ -39,6 +39,14 @@ export async function completeCourse(courseId: string, formData: FormData) {
     create: { userId: session.user.id, courseId, status: 'COMPLETED', completionDate: new Date(), startedAt: new Date(), lastActivityAt: new Date() },
     update: { status: 'COMPLETED', completionDate: new Date(), lastActivityAt: new Date() }
   });
+
+  const events: Array<{ userId: string; courseId: string; event: string; detail?: string }> = [
+    { userId: session.user.id, courseId, event: 'COURSE_COMPLETED' }
+  ];
+  if (acknowledged) {
+    events.push({ userId: session.user.id, courseId, event: 'ACK_SIGNED', detail: 'Learner confirmed understanding' });
+  }
+  await prisma.auditLog.createMany({ data: events });
 
   revalidatePath(`/courses/${courseId}`);
 }
